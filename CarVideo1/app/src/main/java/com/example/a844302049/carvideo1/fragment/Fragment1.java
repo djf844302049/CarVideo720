@@ -29,7 +29,6 @@ import com.youth.banner.Transformer;
 import com.youth.banner.listener.OnBannerListener;
 
 import java.io.IOException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -46,14 +45,14 @@ public class Fragment1 extends Fragment{
     private Banner banner;
     private ArrayList<String> list_path;//banner图片集合
     private ArrayList<String> list_title;//banner标题集合
-    private List<ContentView_one.DataBean> mList = new ArrayList<>();
+    private List<ContentView_one.DataBean> mList = new ArrayList<>();//listView数据集合
     private ListView listView;
     private myAdapter adapter;
 
-    String a;
-    String b;
+    private String a;
+    private String b;
 
-    View mView;
+    private View mView;
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup con, Bundle savedInstanceState){
         mView = inflater.inflate(R.layout.fragment_layout1,con,false);
@@ -69,42 +68,60 @@ public class Fragment1 extends Fragment{
                 startActivity(intent);
             }
         });//listView子项点击事件
-
         listView.setOnScrollListener(new listviewListener());
         initData();//获取并加载ListView界面的URL数据
         return mView;
     }
-    public void initView(){
-        banner = mView.findViewById(R.id.banner_1);
-        list_path = new ArrayList<>();
-        list_title = new ArrayList<>();
-        list_path.add("http://img.cheshijie.com/video-thumb/csj_28738655275-jwzrHKAMwi.jpg?x-oss-process=image/resize,w_898/crop,x_161,y_60,w_718,h_539");
-        list_path.add("http://img.cheshijie.com/video-thumb/csj_13488809342-85NGR8Mi6T.jpg?x-oss-process=image/resize,w_958/crop,x_119,y_0,w_718,h_539");
-        list_path.add("http://img.cheshijie.com/video-thumb/csj_38738655275-4kDxiCiCwH.jpg?x-oss-process=image/resize,w_680/crop,x_46,y_3,w_596,h_397");
-        list_path.add("http://img.cheshijie.com/video-thumb/csj_13488809342-mbWz2rWGNT.png?x-oss-process=image/resize,w_958/crop,x_136,y_0,w_717,h_538");
-        list_title.add("好好学习");
-        list_title.add("天天向上");
-        list_title.add("热爱劳动");
-        list_title.add("不搞对象");
 
-        banner.setImageLoader(new MyLoader());//设置图片加载器，图片加载器在下方
-        banner.setImages(list_path);//设置图片网址或地址的集合
-        banner.setBannerAnimation(Transformer.Default);//设置轮播的动画效果，内含多种特效，可点入
-        // 方法内查找后内逐一体验
-        banner.setBannerTitles(list_title);//设置轮播图的标题集合
-        banner.setDelayTime(3000);//设置轮播间隔时间
-        banner.isAutoPlay(true);//设置是否为自动轮播，默认是“是”。
-        banner.setIndicatorGravity(BannerConfig.CENTER);//设置指示器的位置，小点点，左中右。
-        banner.setOnBannerListener(new OnBannerListener() {
+    private void initView(){
+        String address = "http://wx.cheshijie.com/index.php/Home/Api/typeTuijian?type=29";//数据源
+        HttpUtil.sendOkHttpRequest(address, new Callback() {//获取，响应数据源
             @Override
-            public void OnBannerClick(int position) {
-                Toast.makeText(getContext(),"你点击了",Toast.LENGTH_SHORT).show();
+            public void onFailure(Call call, IOException e) {
+                Toast.makeText(getContext(),"获取失败，请检查网络连接",Toast.LENGTH_SHORT).show();
             }
-        }).start();
+            @Override
+            public void onResponse(Call call, Response response) throws IOException {
+                final String responseData = response.body().string();//获得请求结果数据
+                getActivity().runOnUiThread(new Runnable() {//开启更新UI线程
+                    @Override
+                    public void run() {
+                        Log.i("====",responseData);
+                        ContentView_one contentView_one = GsonUtils.parseJSON(responseData,ContentView_one.class);//解析JSON数据
+                        final List<ContentView_one.DataBean> data = contentView_one.getData();//定义数据集合
+                        banner = mView.findViewById(R.id.banner_1);
+                        list_path = new ArrayList<>();
+                        list_title = new ArrayList<>();
+                        for(int i = 0;i<4;i++){
+                            list_path.add(data.get(i).getImagename());
+                            list_title.add(data.get(i).getTitle());
+                        }//遍历添加四个图片URL和四个标题URL
+                        banner.setBannerStyle(BannerConfig.CIRCLE_INDICATOR_TITLE_INSIDE);
+                        banner.setImageLoader(new MyLoader());//设置图片加载器，图片加载器在下方
+                        banner.setImages(list_path);//设置图片网址或地址的集合
+                        banner.setBannerAnimation(Transformer.Default);//设置轮播的动画效果，内含多种特效
+                        banner.setBannerTitles(list_title);//设置轮播图的标题集合
+                        banner.setDelayTime(3000);//设置轮播间隔时间
+                        banner.isAutoPlay(true);//设置是否为自动轮播，默认:是。
+                        banner.setIndicatorGravity(BannerConfig.CENTER);//设置指示器的位置，小点点，左中右。
+                        banner.setOnBannerListener(new OnBannerListener() {
+                            @Override
+                            public void OnBannerClick(int position) {//子项点击事件
+                                Intent intent = new Intent(getContext(),Mp4Activity.class);
+                                intent.putExtra("mp4",data.get(position).getUrl());//传入当前项的URL播放地址
+                                startActivity(intent);
+                            }
+                        }).start();
+
+                    }
+                });
+            }
+        });
+
     }//banner逻辑
-    public void initData(){
-        String address = "http://wx.cheshijie.com/index.php/home/api/newest?page=1&limit=5";
-        HttpUtil.sendOkHttpRequest(address, new Callback() {
+    private void initData(){
+        String addressss = "http://wx.cheshijie.com/index.php/home/api/newest?page=1&limit=5";
+        HttpUtil.sendOkHttpRequest(addressss, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
                 Toast.makeText(getContext(),"获取失败",Toast.LENGTH_SHORT).show();
@@ -116,11 +133,11 @@ public class Fragment1 extends Fragment{
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        Log.e("====",responseData);
+//                        Log.e("====",responseData);
                         ContentView_one contentView_one = GsonUtils.parseJSON(responseData,ContentView_one.class);
                         List<ContentView_one.DataBean> data = contentView_one.getData();
                         mList.addAll(data);
-                        Log.i("====", "run: "+mList.get(0).getImagename());
+//                        Log.i("====", "run: "+mList.get(0).getImagename());
                         adapter.notifyDataSetChanged();
                     }
                 });
@@ -196,11 +213,11 @@ public class Fragment1 extends Fragment{
                             getActivity().runOnUiThread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    Log.e("====",responseData);
+//                                    Log.e("====",responseData);
                                     ContentView_one contentView_one = GsonUtils.parseJSON(responseData,ContentView_one.class);
                                     List<ContentView_one.DataBean> data = contentView_one.getData();
                                     mList.addAll(data);
-                                    Log.i("====", "run: "+mList.get(0).getImagename());
+//                                    Log.i("====", "run: "+mList.get(0).getImagename());
                                     adapter.notifyDataSetChanged();
                                 }
                             });
